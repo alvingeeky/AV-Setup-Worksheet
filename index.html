@@ -779,27 +779,36 @@ document.getElementById('submitBtn').addEventListener('click', function(){
     + '<p class="practical-note">Task 2a and 3a marks are self-checked — please make sure your lecturer has actually verified those items before ticking them.</p>'
     + '</div>';
 
+  html = html.replace('</div>', '<p id="submissionStatus" style="margin-top:14px;font-weight:700;color:var(--amber);">Sending result...</p></div>');
   document.getElementById('scoreSummary').innerHTML = html;
   document.getElementById('scoreSummary').scrollIntoView({behavior:'smooth', block:'start'});
 
+  var formData = new URLSearchParams();
+  formData.append('name', name);
+  formData.append('index', idx);
+  formData.append('score', result.earned);
 
-
-  fetch("https://script.google.com/macros/s/AKfycbyTlWLJoNcepIOFfcvaMRL-kabYnsZHrtGd9fIt5vqpfAo6jfKzHGT4a0iOl_nTqoTEXA/exec", {
-    method:"POST",
-    body:new URLSearchParams({
-      name:name,
-      index:idx,
-      score:String(result.earned)
-    })
+  fetch('https://script.google.com/macros/s/AKfycbz0-rtlb4Ov40RICo3v4LPxd5jOo3rdTmES2hCxA6rWyY_J3WUPzRQVXj9UFLVouOOZwA/exec', {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: formData.toString()
   }).then(function(){
-    alert("Submission successful!");
-  }).catch(function(err){
-    alert("Submission failed. Please try again.");
-    console.error(err);
+    var status = document.getElementById('submissionStatus');
+    if(status){
+      status.textContent = '✓ Result submitted to lecturer.';
+      status.style.color = 'var(--green)';
+    }
+  }).catch(function(){
+    var status = document.getElementById('submissionStatus');
+    if(status){
+      status.textContent = 'Could not submit online. Please inform your lecturer.';
+      status.style.color = 'var(--red)';
+    }
+  }).finally(function(){
+    lockWorksheet();
+    saveWorksheetAsFile(name, idx);
   });
-
-  lockWorksheet();
-  saveWorksheetAsFile(name, idx);
 });
 
 function lockWorksheet(){
