@@ -758,10 +758,36 @@ function gradeQuiz(){
   return {total: total, earned: earned, breakdown: breakdown};
 }
 
+// ==== Sends the result to your Google Sheet via the Apps Script Web App ====
+// This is your deployed Apps Script /exec URL. If you ever redeploy and get a new
+// URL, update it here.
+var SHEET_SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbz0-rtlb4Ov40RlCo3v4LPxd5jOo3rdTmES2hCxA6rWyY_J3WUPzRQVXj9UFLVouOOZwA/exec';
+
+function submitToSheet(name, idx, earned, total){
+  var params = new URLSearchParams();
+  params.append('name', name);
+  params.append('index', idx);
+  params.append('score', earned);
+  params.append('total', total);
+
+  // mode:'no-cors' avoids the CORS/preflight block that caused "Submission failed" before.
+  // We can't read the response back, but the data still reaches the Sheet.
+  fetch(SHEET_SUBMIT_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: {'Content-Type':'application/x-www-form-urlencoded'},
+    body: params.toString()
+  }).catch(function(err){
+    console.error('Could not reach Google Sheet:', err);
+  });
+}
+
 document.getElementById('submitBtn').addEventListener('click', function(){
   var result = gradeQuiz();
   var name = document.getElementById('studentName').value || '(name not entered)';
   var idx = document.getElementById('studentIndex').value || '(index not entered)';
+
+  submitToSheet(name, idx, result.earned, result.total);
 
   var rows = result.breakdown.map(function(r){
     var label=r[0], got=r[1], marks=r[2], answer=r[3]||'';
@@ -775,40 +801,12 @@ document.getElementById('submitBtn').addEventListener('click', function(){
     + '<h2>'+name+' — '+idx+'</h2>'
     + '<div class="score-big">'+result.earned+' / '+result.total+'</div>'
     + '<p style="color:var(--gray);margin:4px 0 0;">Total score across all tasks</p>'
-    + '<p style="margin:10px 0 0;font-weight:700;color:var(--green);">✓ Result sent to lecturer.</p>'
     + '<table class="score-table"><thead><tr><th>Section</th><th>Score</th><th>Correct answer</th></tr></thead><tbody>'+rows+'</tbody></table>'
     + '<p class="practical-note">Task 2a and 3a marks are self-checked — please make sure your lecturer has actually verified those items before ticking them.</p>'
     + '</div>';
 
   document.getElementById('scoreSummary').innerHTML = html;
   document.getElementById('scoreSummary').scrollIntoView({behavior:'smooth', block:'start'});
-
-  var iframe = document.getElementById('submissionFrame');
-  if(!iframe){
-    iframe = document.createElement('iframe');
-    iframe.id = 'submissionFrame';
-    iframe.name = 'submissionFrame';
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
-  }
-
-  var form = document.createElement('form');
-  form.method = 'POST';
-  form.action = 'https://script.google.com/macros/s/AKfycbz0-rtlb4Ov40RICo3v4LPxd5jOo3rdTmES2hCxA6rWyY_J3WUPzRQVXj9UFLVouOOZwA/exec';
-  form.target = 'submissionFrame';
-  form.style.display = 'none';
-
-  [['name', name], ['index', idx], ['score', result.earned]].forEach(function(item){
-    var input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = item[0];
-    input.value = item[1];
-    form.appendChild(input);
-  });
-
-  document.body.appendChild(form);
-  form.submit();
-  form.remove();
 
   lockWorksheet();
   saveWorksheetAsFile(name, idx);
