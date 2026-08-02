@@ -782,6 +782,22 @@ document.getElementById('submitBtn').addEventListener('click', function(){
   document.getElementById('scoreSummary').innerHTML = html;
   document.getElementById('scoreSummary').scrollIntoView({behavior:'smooth', block:'start'});
 
+
+
+  fetch("https://script.google.com/macros/s/AKfycbyTlWLJoNcepIOFfcvaMRL-kabYnsZHrtGd9fIt5vqpfAo6jfKzHGT4a0iOl_nTqoTEXA/exec", {
+    method:"POST",
+    body:new URLSearchParams({
+      name:name,
+      index:idx,
+      score:String(result.earned)
+    })
+  }).then(function(){
+    alert("Submission successful!");
+  }).catch(function(err){
+    alert("Submission failed. Please try again.");
+    console.error(err);
+  });
+
   lockWorksheet();
   saveWorksheetAsFile(name, idx);
 });
